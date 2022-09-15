@@ -1,12 +1,12 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, combineLatest, Observable } from 'rxjs';
 import { Link } from './app.component';
+import { map } from 'rxjs/operators';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class NavigationService {
-
   private staticNavigationItems$: BehaviorSubject<Link[]> = new BehaviorSubject<Link[]>(null);
   private dynamicNavigationItems$: BehaviorSubject<Link[]> = new BehaviorSubject<Link[]>(null);
 
@@ -21,16 +21,23 @@ export class NavigationService {
     this.mockFetchNavigationItems();
   }
 
-  public getNavigationItems(): any {
-    // TODO: use static and remote navigation items sorted by title
-    // and since the data is not curated well, please remove the invalid items
+  public getNavigationItems(): Observable<Link[]> {
+    return combineLatest([this.staticNavigationItems$, this.dynamicNavigationItems$]).pipe(
+      map(([a, b]) => [...(a || []), ...(b || [])]),
+      map((linkArray) => linkArray.filter((link) => link.title && link.route)),
+      map((linkArray) => linkArray.sort((a, b) => a.title.localeCompare(b.title)))
+    );
   }
 
   private mockFetchNavigationItems(): void {
     // as if it would come from an http request
-    setTimeout(() => this.dynamicNavigationItems$.next([
-      { title: 'C', route: 'c' },
-      { title: 'Z', route: 'z' },
-    ]), 500);
+    setTimeout(
+      () =>
+        this.dynamicNavigationItems$.next([
+          { title: 'C', route: 'c' },
+          { title: 'Z', route: 'z' },
+        ]),
+      500
+    );
   }
 }
